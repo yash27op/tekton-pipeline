@@ -1,3 +1,5 @@
-#This is a way to assign new codeowner
-
-*   @yash27op
+# Auto-assigned reviewers by GitHub
+*.py @yash27op
+*.sh @yash27op
+README.md @yash27op
+.github/** @yash27op
