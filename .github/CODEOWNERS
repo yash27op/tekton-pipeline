@@ -1,5 +1,5 @@
 # Auto-assigned reviewers by GitHub
 *.py yash27op
-*.sh yash27
-README.md yash27
-.github/** yash27
+*.sh yash27op
+README.md yash27op
+.github/** yash27op
