@@ -1,0 +1,14 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: run-script-task
+spec:
+  steps:
+    - name: run-script
+      image: ubuntu:latest
+      script: |
+        #!/bin/bash
+        chmod +x /workspace/scripts/script.sh
+        /workspace/scripts/script.sh
+  workspaces:
+    - name: scripts
