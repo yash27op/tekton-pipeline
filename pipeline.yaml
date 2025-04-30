@@ -1,0 +1,14 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: run-script-pipeline
+spec:
+  workspaces:
+    - name: scripts
+  tasks:
+    - name: run-script-task
+      taskRef:
+        name: run-script-task
+      workspaces:
+        - name: scripts
+          workspace: scripts

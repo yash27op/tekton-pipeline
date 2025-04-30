@@ -1,0 +1,11 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: run-script-pipelinerun
+spec:
+  pipelineRef:
+    name: run-script-pipeline
+  workspaces:
+    - name: scripts
+      persistentVolumeClaim:
+        claimName: scripts-pvc

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: script-loader
+spec:
+  containers:
+    - name: ubuntu
+      image: ubuntu
+      command: [ "sleep", "3600" ]
+      volumeMounts:
+        - mountPath: /mnt/scripts
+          name: scripts-volume
+  volumes:
+    - name: scripts-volume
+      persistentVolumeClaim:
+        claimName: scripts-pvc
+  restartPolicy: Never
