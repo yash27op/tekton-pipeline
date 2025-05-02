@@ -1,0 +1,23 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: run-script-from-git-run
+spec:
+  pipelineRef:
+    name: run-script-from-git
+  params:
+    - name: repo-url
+      value: "https://github.com/your-user/your-repo.git"
+    - name: branch
+      value: "main"
+
+  workspaces:
+    - name: shared-data
+      volumeClaimTemplate:
+        metadata:
+          name: git-run-pvc
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 500Mi
