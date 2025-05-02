@@ -1,74 +1,84 @@
 #!/bin/bash
-set -euo pipefail
+set -e
 
-# === CONFIGURATION ===
-REPO="your-username/your-repo"        # <-- Replace this
-README_FILE="README.md"
-NEW_TAG="v$(date +%Y%m%d%H%M)"
-COMMIT_MESSAGE="Interactive README update for $NEW_TAG"
-TARGET_HEADING="## Features"
+#################################
+# === CHECK: GitHub CLI Installed ===
+#################################
 
-# === ASK FOR PARAGRAPH (Supports Multi-line) ===
-echo "📝 Enter the paragraph you want to insert under '$TARGET_HEADING' in README.md."
-echo "(Press CTRL+D when you're done typing)"
-
-NEW_PARAGRAPH=$(</dev/stdin)
-
-# === VALIDATE INPUT ===
-if [[ -z "$NEW_PARAGRAPH" ]]; then
-  echo "❌ No paragraph entered. Exiting."
-  exit 1
+if ! command -v gh &> /dev/null; then
+    echo "❌ GitHub CLI (gh) is not installed. Install it from https://cli.github.com/"
+    exit 1
 fi
 
-# === BACKUP AND MODIFY README.md ===
-echo "🔧 Inserting your paragraph into $README_FILE..."
-TEMP_FILE=$(mktemp)
+#################################
+# === BRANCH CREATION ===
+#################################
 
-awk -v insert="$NEW_PARAGRAPH" -v heading="$TARGET_HEADING" '
-BEGIN {
-  added = 0
-}
-{
-  print
-  if ($0 ~ heading && !added) {
-    print ""
-    n = split(insert, lines, "\n")
-    for (i = 1; i <= n; i++) {
-      print lines[i]
-    }
-    print ""
-    added = 1
-  }
-}' "$README_FILE" > "$TEMP_FILE" && mv "$TEMP_FILE" "$README_FILE"
+read -p "Enter a new branch name: " NEW_BRANCH
+if [[ -z "$NEW_BRANCH" ]]; then
+    echo "❌ Branch name cannot be empty."
+    exit 1
+fi
 
-# === COMMIT ONLY README.md ===
-echo "💾 Committing README changes..."
-git add "$README_FILE"
-git commit -m "$COMMIT_MESSAGE"
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-git push origin "$CURRENT_BRANCH"
+git checkout -b "$NEW_BRANCH"
+echo "✅ Created and switched to branch: $NEW_BRANCH"
 
-# === TAG AND PUSH ===
-echo "🏷️  Tagging release: $NEW_TAG"
-git tag "$NEW_TAG"
-git push origin "$NEW_TAG"
+#################################
+# === MAKE CHANGES INTERACTIVE ===
+#################################
 
-# === GENERATE RELEASE NOTES ===
-echo "🧾 Generating release notes..."
-LAST_TAG=$(git describe --tags --abbrev=0 --exclude "$NEW_TAG" 2>/dev/null || echo "")
-if [[ -z "$LAST_TAG" ]]; then
-  echo "Initial release. Full README.md contents:" > release_notes.md
-  echo -e "\n\`\`\`markdown\n$(cat $README_FILE)\n\`\`\`" >> release_notes.md
+echo "🛠️  Make your changes now. Press Enter when done."
+read -p "Press Enter to continue..."
+
+git status
+
+#################################
+# === COMMIT LOOP ===
+#################################
+
+while true; do
+    read -p "Do you want to add more changes? (y/n): " ADD_MORE
+    if [[ "$ADD_MORE" == "y" ]]; then
+        git add .
+        read -p "Enter commit message for these changes: " COMMIT_MSG
+        git commit -m "$COMMIT_MSG"
+        git status
+    else
+        break
+    fi
+done
+
+#################################
+# === PUSH CHANGES ===
+#################################
+
+git push -u origin "$NEW_BRANCH"
+
+#################################
+# === PR DETAILS ===
+#################################
+
+read -p "Enter base branch for PR (e.g., main, develop): " BASE_BRANCH
+read -p "Enter PR Title: " PR_TITLE
+read -p "Enter PR Description: " PR_BODY
+read -p "Enter reviewers (comma-separated GitHub usernames), or leave blank: " REVIEWERS
+
+#################################
+# === CREATE PR USING gh ===
+#################################
+
+if [[ -z "$REVIEWERS" ]]; then
+    gh pr create --base "$BASE_BRANCH" --head "$NEW_BRANCH" --title "$PR_TITLE" --body "$PR_BODY"
 else
-  echo "Changes in $README_FILE since $LAST_TAG:" > release_notes.md
-  echo -e "\n\`\`\`diff\n$(git diff "$LAST_TAG"..HEAD -- $README_FILE)\n\`\`\`" >> release_notes.md
+    gh pr create --base "$BASE_BRANCH" --head "$NEW_BRANCH" --title "$PR_TITLE" --body "$PR_BODY" --reviewer "$REVIEWERS"
 fi
 
-# === CREATE RELEASE ===
-echo "🚀 Creating GitHub release..."
-gh release create "$NEW_TAG" \
-  --repo "$REPO" \
-  --title "README Update - $NEW_TAG" \
-  --notes-file release_notes.md
+#################################
+# === FINAL STATUS ===
+#################################
 
-echo "✅ Success! Paragraph added, committed, tagged, and released as $NEW_TAG."
+if [ $? -eq 0 ]; then
+    echo "✅ Pull request successfully created from $NEW_BRANCH to $BASE_BRANCH."
+else
+    echo "❌ Failed to create pull request."
+fi
