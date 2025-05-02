@@ -8,8 +8,8 @@ if ! command -v gh &> /dev/null; then
 fi
 
 # === SYNC WITH MAIN ===
-git checkout main
-git pull origin main
+# git checkout main
+# git pull origin main
 
 # === BRANCH CREATION ===
 read -p "Enter a new branch name: " NEW_BRANCH
