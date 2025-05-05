@@ -1,25 +1,36 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: run-git-script
+  name: git-clone-run-internal
 spec:
+  params:
+    - name: repo-url
+      description: github.com/yash27op/tekton-pipeline
+      type: string
+    - name: branch
+      description: main
+      type: string
+    - name: script-path
+      description: scripts/create-pr.sh
+      type: string
   workspaces:
-    - name: source
+    - name: shared-data
   steps:
-    - name: run-script
-      image: ubuntu
-      workingDir: $(workspaces.source.path)
+    - name: clone-and-run
+      image: node:20-bullseye
+      env:
+        - name: GIT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: ghe-token-secret
+              key: token
       script: |
         #!/bin/bash
-        echo "[INFO] Current directory: $(pwd)"
-        echo "[INFO] Listing files:"
-        ls -R
-
-        if [ ! -f scripts/myscript.sh ]; then
-          echo "[ERROR] scripts/myscript.sh not found!"
-          exit 1
-        fi
-
-        echo "[INFO] Running the script..."
-        chmod +x scripts/myscript.sh
-        ./scripts/myscript.sh
+        set -e
+        echo "[TASK] Cloning repo from branch $(params.branch)"
+        cd $(workspaces.shared-data.path)
+        git clone -b $(params.branch) https://oauth2:${GIT_TOKEN}@$(params.repo-url) repo
+        cd repo
+        echo "[TASK] Running script: $(params.script-path)"
+        chmod +x $(params.script-path)
+        ./$(params.script-path)
