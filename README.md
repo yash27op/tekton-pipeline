@@ -1,6 +1,6 @@
 # Project Title
 
-Scrum is a discussion or meeting where everyone gives their updates and help to track
+
 Welcome to **ProjectX** – a lightweight, modular, and developer-friendly solution for automating GitHub PR workflows. This project streamlines branch creation, commit handling, and PR generation using simple shell scripts and GitHub CLI tools.
 
 ## Features 
@@ -20,9 +20,3 @@ You can run the entire automation using:
 ```bash
 ./pr-script.sh
 
-
-
-## Features
-- Scrum is a discussion or meeting where everyone gives their updates and help to track
-
-- Scrum is a discussion or meeting where everyone gives their updates and help to track
