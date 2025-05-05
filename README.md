@@ -29,3 +29,4 @@ Scrum is a discussion or meeting where everyone gives their updates and help to 
 Scrum is a discussion or meeting where everyone gives their updates and help to track
 - Scrum is a discussion or meeting where everyone gives their updates and help to track
 - There is a discussion on PRojectX lead whom to make
+- There is a discussion on PRojectX lead whom to make
