@@ -4,7 +4,7 @@ Welcome to **ProjectX** – a lightweight, modular, and developer-friendly solut
 
 ---
 
-##  Features 
+## Features 
 
 - **Automatic branch creation** from any base
 - **Interactive commit message prompts**
@@ -13,7 +13,7 @@ Welcome to **ProjectX** – a lightweight, modular, and developer-friendly solut
 
 ---
 
-##  Code Block + Inline Code
+## Code Block + Inline Code
 Scrum is a discussion or meeting where everyone gives their updates and help to track
 
 You can run the entire automation using:
@@ -21,6 +21,6 @@ You can run the entire automation using:
 ```bash
 ./pr-script.sh
 
-## Features
+
 Scrum is a discussion or meeting where everyone gives their updates and help to track
 Scrum is a discussion or meeting where everyone gives their updates and help to track
