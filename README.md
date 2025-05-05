@@ -30,3 +30,6 @@ Scrum is a discussion or meeting where everyone gives their updates and help to 
 
  
 Scrum is a discussion or meeting where everyone gives their updates and help to track
+
+## Features
+- Scrum is a discussion or meeting where everyone gives their updates and help to track
