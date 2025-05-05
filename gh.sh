@@ -22,12 +22,12 @@ echo "✅ GH_TOKEN is loaded: ${GH_TOKEN:0:5}********"
 
 #################################
 
-NEW_BRANCH="remote6"
+NEW_BRANCH="collaborate"
 BASE_BRANCH="main"
-COMMIT_MESSAGE="docs: updated README with latest changes 4"
-PR_TITLE="Update: README Improvements"
+COMMIT_MESSAGE="Multiple Colllaborators are added"
+PR_TITLE="Assigning new Collaborator"
 PR_BODY="Added enhancements to the documentation section."
-REVIEWERS="aamadeuss"  # Comma-separated GitHub usernames
+REVIEWERS="Vipin654"  # Comma-separated GitHub usernames
 GH_TOKEN="${GH_TOKEN}"  # Provided externally or via .env file
 
 #################################
