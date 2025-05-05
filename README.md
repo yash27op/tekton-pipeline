@@ -20,3 +20,6 @@ You can run the entire automation using:
 ```bash
 ./pr-script.sh
 
+
+## Features
+- Scrum is a discussion or meeting where everyone gives their updates and help to track
