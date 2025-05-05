@@ -1,47 +1,28 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: run-script-from-git
+  name: run-script-from-repo
 spec:
   params:
     - name: repo-url
       type: string
     - name: branch
       type: string
-      default: "main"
-
+    - name: script-path
+      type: string
   workspaces:
     - name: shared-data
-
   tasks:
-    - name: clone-repo
+    - name: clone-and-run-task
       taskRef:
-        name: git-clone
-        kind: ClusterTask
+        name: git-clone-run-internal
       params:
-        - name: url
-          value: "$(params.repo-url)"
-        - name: revision
-          value: "$(params.branch)"
-        - name: deleteExisting
-          value: "true"
+        - name: repo-url
+          value: $(params.repo-url)
+        - name: branch
+          value: $(params.branch)
+        - name: script-path
+          value: $(params.script-path)
       workspaces:
-        - name: output
-          workspace: shared-data
-
-    - name: run-script
-      runAfter: ["clone-repo"]
-      taskSpec:
-        steps:
-          - name: run-script
-            image: ubuntu
-            workingDir: $(workspaces.repo.path)
-            script: |
-              #!/bin/bash
-              chmod +x scripts/myscript.sh
-              ./scripts/myscript.sh
-        workspaces:
-          - name: repo
-      workspaces:
-        - name: repo
+        - name: shared-data
           workspace: shared-data

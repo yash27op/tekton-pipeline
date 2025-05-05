@@ -1,25 +1,24 @@
 apiVersion: tekton.dev/v1
-kind: Task
+kind: PipelineRun
 metadata:
-  name: run-git-script
+  name: run-script-from-repo-pipelinerun
 spec:
+  pipelineRef:
+    name: run-script-from-repo
+  params:
+    - name: repo-url
+      value: github.com/yash27op/tekton-pipeline
+    - name: branch
+      value: new
+    - name: script-path
+      value: scripts/create-pr.sh
   workspaces:
-    - name: source
-  steps:
-    - name: run-script
-      image: ubuntu
-      workingDir: $(workspaces.source.path)
-      script: |
-        #!/bin/bash
-        echo "[INFO] Current directory: $(pwd)"
-        echo "[INFO] Listing files:"
-        ls -R
-
-        if [ ! -f scripts/myscript.sh ]; then
-          echo "[ERROR] scripts/myscript.sh not found!"
-          exit 1
-        fi
-
-        echo "[INFO] Running the script..."
-        chmod +x scripts/myscript.sh
-        ./scripts/myscript.sh
+    - name: shared-data
+      volumeClaimTemplate:
+        metadata:
+          name: shared-data-pvc
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 1Gi
