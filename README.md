@@ -4,7 +4,8 @@ Welcome to **ProjectX** – a lightweight, modular, and developer-friendly solut
 
 ---
 
-##  Features *(with Emphasis and Lists)*
+##  Features 
+Scrum is a discussion or meeting where everyone gives their updates and help to track
 
 - **Automatic branch creation** from any base
 - **Interactive commit message prompts**
