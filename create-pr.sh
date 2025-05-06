@@ -1,72 +1,111 @@
 #!/bin/bash
 set -e
 
-# Ensure GitHub CLI is installed
-if ! command -v gh &> /dev/null; then
-    echo "GitHub CLI (gh) is not installed. Install it from https://cli.github.com/"
+###################################### INPUT VARIABLES #######################################
+
+README_FILE="README.md"
+PARAGRAPH="Scrum is a discussion or meeting where "  # Change this to whatever paragraph you want to insert
+HEADING="## Features"  # Heading under which the paragraph will be inserted
+
+################################# FUNCTION DEFINITION #######################################
+
+insert_paragraph_into_readme() {
+  if [ ! -f "$README_FILE" ]; then
+    echo "Error: $README_FILE not found."
     exit 1
-fi
+  fi
 
-# Get the current branch name
-BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+  # Backup the file
+  cp "$README_FILE" "${README_FILE}.bak"
+  echo "Backup created at ${README_FILE}.bak"
 
-# PR Type Selection
-OPTIONS=("task" "bug" "feature" "hotfix" "fix" "style" "refactor" "test")
-echo "Select PR Type:"
-for i in "${!OPTIONS[@]}"; do
-    echo "$((i+1))) ${OPTIONS[$i]}"
-done
+  # Validate input
+  if [[ -z "$PARAGRAPH" ]]; then
+    echo "Paragraph is empty. Exiting."
+    exit 1
+  fi
 
-while true; do
-    read -p "Enter a number (1-${#OPTIONS[@]}): " PR_TYPE_INDEX
-    if [[ "$PR_TYPE_INDEX" =~ ^[1-9]$ ]] && [ "$PR_TYPE_INDEX" -le "${#OPTIONS[@]}" ]; then
-        PR_TYPE="${OPTIONS[$((PR_TYPE_INDEX-1))]}"
-        break
-    else
-        echo "Invalid choice, please enter a number between 1 and ${#OPTIONS[@]}"
+  # Detect formatting style under the heading
+  formatting_style="paragraph"  # default
+  temp_style_file=$(mktemp)
+  
+  # Extract content under the heading
+  awk -v heading="$HEADING" '
+    $0 ~ heading {found=1; next}
+    found && /^##/ {exit}  # Stop at next heading
+    found {print}
+  ' "$README_FILE" > "$temp_style_file"
+
+  # Analyze formatting style
+  if grep -q '^[*-] ' "$temp_style_file"; then
+    formatting_style="bullet"
+  elif grep -q '^[0-9]\. ' "$temp_style_file"; then
+    formatting_style="numbered"
+  fi
+
+  # Prepare the paragraph in correct format
+  case "$formatting_style" in
+    "bullet")
+      formatted_paragraph="- $PARAGRAPH"
+      ;;
+    "numbered")
+      # Count existing numbered items
+      item_count=$(grep -c '^[0-9]\. ' "$temp_style_file")
+      ((item_count++))
+      formatted_paragraph="$item_count. $PARAGRAPH"
+      ;;
+    *)
+      formatted_paragraph="$PARAGRAPH"
+      ;;
+  esac
+
+  # Insert the formatted paragraph
+  temp_file=$(mktemp)
+  inserted=0
+  in_section=0
+
+  while IFS= read -r line; do
+    echo "$line" >> "$temp_file"
+    
+    if [[ "$line" == *"$HEADING"* ]]; then
+      in_section=1
+    elif [[ $in_section -eq 1 && $inserted -eq 0 ]]; then
+      # Check if we've reached the end of the section content
+      if [[ "$line" == "" || "$line" =~ ^## ]]; then
+        echo "$formatted_paragraph" >> "$temp_file"
+        echo "" >> "$temp_file"
+        inserted=1
+      fi
     fi
-done
+  done < "$README_FILE"
 
-# Prompt for base branch, PR title, and description
-read -p "Enter the base branch (e.g., main, develop): " BASE_BRANCH
-read -p "Enter PR Title: " PR_TITLE
-read -p "Enter PR Description: " PR_DESCRIPTION
+  # If heading wasn't found or section was empty, append at end
+  if [[ $inserted -eq 0 ]]; then
+    echo "" >> "$temp_file"
+    echo "$HEADING" >> "$temp_file"
+    echo "$formatted_paragraph" >> "$temp_file"
+    echo " Heading \"$HEADING\" not found. Section created at end of file."
+  else
+    echo " Paragraph inserted under \"$HEADING\" in $formatting_style format."
+  fi
 
-# Prompt for reviewers (comma separated GitHub usernames, optional)
-read -p "Enter GitHub usernames of reviewers (comma separated, or leave blank): " REVIEWERS_LIST
+  mv "$temp_file" "$README_FILE"
+  rm "$temp_style_file"
 
-# Ensure mandatory inputs are not empty
-if [[ -z "$BASE_BRANCH" || -z "$PR_TITLE" || -z "$PR_DESCRIPTION" ]]; then
-    echo "Error: All fields are required!"
-    exit 1
-fi
+  # Show git diff
+  echo "🔍 Git diff:"
+  git diff "$README_FILE"
 
-# Format PR title
-FINAL_PR_TITLE="$PR_TYPE: $PR_TITLE"
+  # Git commit and push
+  echo " Committing and pushing changes to GitHub..."
+  git add "$README_FILE"
+  git commit -m "Update README.md: Added content under '$HEADING'"
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  git push origin "$branch"
 
-# Stage any unstaged changes (Optional: Ask user)
-echo "Do you want to add changes before pushing? (y/n)"
-read add_changes
+  echo " Changes successfully pushed to GitHub branch '$branch'."
+}
 
-if [[ "$add_changes" == "y" ]]; then
-    git add .
-    read -p "Enter commit message for new changes: " COMMIT_MESSAGE
-    git commit -m "$COMMIT_MESSAGE"
-fi
+################################# EXECUTE FUNCTION CALL ##########################################
 
-# Push the current branch (create upstream if not pushed yet)
-git push -u origin "$BRANCH_NAME"
-
-# Create the Pull Request
-if [[ -z "$REVIEWERS_LIST" ]]; then
-    gh pr create --base "$BASE_BRANCH" --head "$BRANCH_NAME" --title "$FINAL_PR_TITLE" --body "$PR_DESCRIPTION"
-else
-    gh pr create --base "$BASE_BRANCH" --head "$BRANCH_NAME" --title "$FINAL_PR_TITLE" --body "$PR_DESCRIPTION" --reviewer "$REVIEWERS_LIST"
-fi
-
-# Confirm PR creation
-if [ $? -eq 0 ]; then
-    echo "✅ Pull request successfully created!"
-else
-    echo "❌ Failed to create pull request."
-fi
+insert_paragraph_into_readme
