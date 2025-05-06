@@ -15,8 +15,6 @@ Scrum is a discussion or meeting where everyone gives their updates and help to 
 
 ---
 
-
-- Scrum is a discussion or meeting where everyone gives their updates and help to track
 ## Code Block + Inline Code
 This block contains an introduction to any code and creates a inline sections of the code
 
