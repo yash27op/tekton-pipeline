@@ -4,6 +4,7 @@
 Welcome to **ProjectX** – a lightweight, modular, and developer-friendly solution for automating GitHub PR workflows. This project streamlines branch creation, commit handling, and PR generation using simple shell scripts and GitHub CLI tools.
 
 
+Scrum is a discussion or meeting where everyone gives their updates and help to track
 ## Features 
   
 - **Automatic branch creation** from any base
