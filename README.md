@@ -24,4 +24,6 @@ You can run the entire automation using:
 ```bash
 ./pr-script.sh
 ```
-
+# Numbered Heading
+1. this one is for numbered way
+2. this two is in addition
