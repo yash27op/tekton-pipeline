@@ -25,5 +25,6 @@ You can run the entire automation using:
 ./pr-script.sh
 ```
 # Numbered Heading
+1. Scrum is a discussion or meeting where everyone gives their updates and help to track
 1. this one is for numbered way
 2. this two is in addition
