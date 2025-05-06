@@ -22,6 +22,9 @@ This block contains an introduction to any code and creates a inline sections of
 
 You can run the entire automation using:
 
+
+Scrum is a discussion or meeting where everyone gives their updates and help to track
+
 ```bash
 ./pr-script.sh
 Scrum is a discussion or meeting where everyone gives their updates and help to track
