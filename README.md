@@ -11,6 +11,7 @@ Scrum is a discussion or meeting where everyone gives their updates and help to 
 - **Interactive commit message prompts**
 - **One-line PR creation** with optional reviewer tagging
 - *Minimal setup required* — just Bash, Git, and `gh`
+- Scrum is a discussion or meeting where everyone gives their updates and help to track
 
 ---
 
