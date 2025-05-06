@@ -15,6 +15,7 @@ Welcome to **ProjectX** – a lightweight, modular, and developer-friendly solut
 
 
 ## Code Block + Inline Code
+Scrum is a discussion or meeting where everyone gives their updates and help to track
 
 This block contains an introduction to any code and creates a inline sections of the code
 
