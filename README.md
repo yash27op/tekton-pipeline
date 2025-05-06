@@ -13,6 +13,7 @@ Scrum is a discussion or meeting where everyone gives their updates and help to 
 - *Minimal setup required* — just Bash, Git, and `gh`
 - Scrum is a discussion or meeting where everyone gives their updates and help to track
 - Scrum is a discussion or meeting where everyone gives their updates and help to track
+- Scrum is a discussion or meeting where everyone gives their updates and help to track
 
 ---
 
