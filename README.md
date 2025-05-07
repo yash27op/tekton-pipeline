@@ -1,35 +1,47 @@
-# Project Title
-Scrum is a discussion or meeting where everyone gives their updates and help to track
+# IBM® Key Protect for IBM Cloud® – Feature Updates
 
-Welcome to **ProjectX** – a lightweight, modular, and developer-friendly solution for automating GitHub PR workflows. This project streamlines branch creation, commit handling, and PR generation using simple shell scripts and GitHub CLI tools.
+Stay up-to-date with the new features that are available for IBM® Key Protect for IBM Cloud®.
 
+---
 
-## Features
-- Scrum is a discussion or meeting where everyone gives their updates and help to track
-- Scrum is a discussion or meeting where everyone gives their updates and help to track
-- Scrum is a discussion or meeting where everyone gives their updates and help to track
-- Scrum is a discussion or meeting where everyone gives their updates and help to track
-  
-- **Automatic branch creation** from any base
-- **Interactive commit message prompts**
-- **One-line PR creation** with optional reviewer tagging
-- *Minimal setup required* — just Bash, Git, and `gh`
+##  March 2025
 
+### 11 March 2025
+- **End of Marketing for Key Protect on Satellite**
+  - IBM has announced the **end of marketing for Key Protect on Satellite**.
+  - As of this date:
+    - All **documentation related to Satellite** has been removed.
+    - The **option to select Key Protect on Satellite** from the catalog has been disabled.
 
+---
 
+##  January 2025
 
-## Code Block + Inline Code
-Scrum is a discussion or meeting where everyone gives their updates and help to track
+### 01 January 2025
+- **New Cross-Region Resiliency Pricing Plan**
+  - A new **cross-region resiliency** pricing plan is now available.
+  - Users can:
+    - **Create a new instance** using this plan, or
+    - **Switch existing instances** to this plan.
+  -  For more information, see [Pricing for Key Protect on IBM Cloud](#).
 
-This block contains an introduction to any code and creates a inline sections of the code
+- **Standard Plan Update**
+  - The previous **"Key version pricing"** plan has been **renamed to "Standard"**.
+  - It **does not** include enhanced cross-regional resiliency.
+  - **Note**: The previous benefit of **five free key versions per account** has been discontinued.
 
-You can run the entire automation using:
+---
 
+##  July 2024
 
-```bash
-./pr-script.sh
-```
-# Numbered Heading
-1. Scrum is a discussion or meeting where everyone gives their updates and help to track
-1. this one is for numbered way
-2. this two is in addition
+### 01 July 2024
+Key Protect announces the availability of several new capabilities:
+
+-  Manage **KMIP adapters** using **Terraform**
+-  List `kmip_adapters` associated with a specific `crk_id` via:
+  - API
+  - CLI
+  - SDK
+-  **Force delete** a `kmip_object` using the **API**
+
+---
