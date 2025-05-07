@@ -34,6 +34,11 @@ Stay up-to-date with the new features that are available for IBM® Key Protect f
 
 ##  July 2024
 
+This block contains the latest release notes which were published during the month July ,2024 with some update on services .
+
+
+
+
 ### 01 July 2024
 Key Protect announces the availability of several new capabilities:
 
