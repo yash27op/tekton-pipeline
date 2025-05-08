@@ -103,7 +103,7 @@ if [ -n "$VIRTUAL_ENV" ]; then
 
     # Start an interactive shell inside venv
     echo "Spawning a new shell inside virtual environment..."
-    exec "${SHELL:-/bin}" -i
+    exec "${SHELL:-/bin/bash}" -i
 else
     echo " Error: Virtual environment was not activated." >&2
     exit 1
