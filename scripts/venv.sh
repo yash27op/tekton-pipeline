@@ -99,12 +99,12 @@ fi
 
 # Verify that the virtual environment is activated
 if [ -n "$VIRTUAL_ENV" ]; then
-    echo "✅ Virtual environment '$VENV_DIR' is now active."
+    echo " Virtual environment '$VENV_DIR' is now active."
 
     # Start an interactive shell inside venv
     echo "Spawning a new shell inside virtual environment..."
-    exec "${SHELL:-/bin/bash}" -i
+    exec "${SHELL:-/bin}" -i
 else
-    echo "❌ Error: Virtual environment was not activated." >&2
+    echo " Error: Virtual environment was not activated." >&2
     exit 1
 fi
