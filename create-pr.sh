@@ -3,109 +3,112 @@ set -e
 
 ###################################### INPUT VARIABLES #######################################
 
+REPO_URL="https://github.com/yash27op/tekton-pipeline"
 README_FILE="README.md"
-PARAGRAPH="Scrum is a discussion or meeting where "  # Change this to whatever paragraph you want to insert
-HEADING="## Features"  # Heading under which the paragraph will be inserted
+PARAGRAPH="Scrum is a discussion or meeting where everyone gives their updates and help to track"
+HEADING="# Project Title"
 
-################################# FUNCTION DEFINITION #######################################
+###################################### FUNCTION ###############################################
 
 insert_paragraph_into_readme() {
+  REPO_NAME=$(basename "$REPO_URL" .git)
+
+  if [ ! -d "$REPO_NAME" ]; then
+    echo "Cloning repository $REPO_URL..."
+    git clone "$REPO_URL" "$REPO_NAME"
+    cd "$REPO_NAME"
+  else
+    echo "Using existing repository directory: $REPO_NAME"
+    cd "$REPO_NAME"
+    git pull origin main
+  fi
+
   if [ ! -f "$README_FILE" ]; then
-    echo "Error: $README_FILE not found."
+    echo "Error: $README_FILE not found in repository."
     exit 1
   fi
 
-  # Backup the file
   cp "$README_FILE" "${README_FILE}.bak"
   echo "Backup created at ${README_FILE}.bak"
 
-  # Validate input
   if [[ -z "$PARAGRAPH" ]]; then
     echo "Paragraph is empty. Exiting."
     exit 1
   fi
 
-  # Detect formatting style under the heading
-  formatting_style="paragraph"  # default
-  temp_style_file=$(mktemp)
-  
-  # Extract content under the heading
+  temp_section_file=$(mktemp)
   awk -v heading="$HEADING" '
     $0 ~ heading {found=1; next}
-    found && /^##/ {exit}  # Stop at next heading
+    found && /^#/ {exit}
     found {print}
-  ' "$README_FILE" > "$temp_style_file"
+  ' "$README_FILE" > "$temp_section_file"
 
-  # Analyze formatting style
-  if grep -q '^[*-] ' "$temp_style_file"; then
+  if grep -q '^[*-] ' "$temp_section_file"; then
     formatting_style="bullet"
-  elif grep -q '^[0-9]\. ' "$temp_style_file"; then
+  elif grep -q '^[0-9]\. ' "$temp_section_file"; then
     formatting_style="numbered"
+  else
+    formatting_style="paragraph"
   fi
 
-  # Prepare the paragraph in correct format
   case "$formatting_style" in
-    "bullet")
+    bullet)
       formatted_paragraph="- $PARAGRAPH"
       ;;
-    "numbered")
-      # Count existing numbered items
-      item_count=$(grep -c '^[0-9]\. ' "$temp_style_file")
-      ((item_count++))
-      formatted_paragraph="$item_count. $PARAGRAPH"
+    numbered)
+      count=$(grep -c '^[0-9]\. ' "$temp_section_file")
+      formatted_paragraph="$((count + 1)). $PARAGRAPH"
       ;;
     *)
       formatted_paragraph="$PARAGRAPH"
       ;;
   esac
 
-  # Insert the formatted paragraph
-  temp_file=$(mktemp)
-  inserted=0
+  temp_output=$(mktemp)
   in_section=0
+  inserted=0
 
   while IFS= read -r line; do
-    echo "$line" >> "$temp_file"
-    
-    if [[ "$line" == *"$HEADING"* ]]; then
+    echo "$line" >> "$temp_output"
+    if [[ "$line" == "$HEADING" ]]; then
       in_section=1
-    elif [[ $in_section -eq 1 && $inserted -eq 0 ]]; then
-      # Check if we've reached the end of the section content
-      if [[ "$line" == "" || "$line" =~ ^## ]]; then
-        echo "$formatted_paragraph" >> "$temp_file"
-        echo "" >> "$temp_file"
-        inserted=1
-      fi
+      continue
+    fi
+    if [[ $in_section -eq 1 && "$line" =~ ^# ]]; then
+      echo "$formatted_paragraph" >> "$temp_output"
+      inserted=1
+      in_section=0
     fi
   done < "$README_FILE"
 
-  # If heading wasn't found or section was empty, append at end
-  if [[ $inserted -eq 0 ]]; then
-    echo "" >> "$temp_file"
-    echo "$HEADING" >> "$temp_file"
-    echo "$formatted_paragraph" >> "$temp_file"
-    echo " Heading \"$HEADING\" not found. Section created at end of file."
-  else
-    echo " Paragraph inserted under \"$HEADING\" in $formatting_style format."
+  if [[ $inserted -eq 0 && $in_section -eq 1 ]]; then
+    echo "$formatted_paragraph" >> "$temp_output"
+    inserted=1
   fi
 
-  mv "$temp_file" "$README_FILE"
-  rm "$temp_style_file"
+  if [[ $inserted -eq 0 ]]; then
+    echo "" >> "$temp_output"
+    echo "$HEADING" >> "$temp_output"
+    echo "$formatted_paragraph" >> "$temp_output"
+    echo "Heading \"$HEADING\" not found. Section created at end of file."
+  else
+    echo "Paragraph inserted under \"$HEADING\" in $formatting_style format."
+  fi
 
-  # Show git diff
-  echo "🔍 Git diff:"
+  mv "$temp_output" "$README_FILE"
+  rm "$temp_section_file"
+
+  echo "Showing diff:"
   git diff "$README_FILE"
 
-  # Git commit and push
-  echo " Committing and pushing changes to GitHub..."
   git add "$README_FILE"
-  git commit -m "Update README.md: Added content under '$HEADING'"
+  git commit -m "docs: updated $README_FILE - appended under '$HEADING'"
   branch=$(git rev-parse --abbrev-ref HEAD)
   git push origin "$branch"
 
-  echo " Changes successfully pushed to GitHub branch '$branch'."
+  echo "Changes pushed to $REPO_URL (branch: $branch)"
 }
 
-################################# EXECUTE FUNCTION CALL ##########################################
+################################# EXECUTE #######################################################
 
 insert_paragraph_into_readme
