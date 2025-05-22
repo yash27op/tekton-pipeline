@@ -18,6 +18,7 @@ Stay up-to-date with the new features that are available for IBM® Key Protect f
 ##  January 2025
 
 ### 01 January 2025
+- the paragraph will be acting as a testing for the scripts
 - **New Cross-Region Resiliency Pricing Plan**
   - A new **cross-region resiliency** pricing plan is now available.
   - Users can:
