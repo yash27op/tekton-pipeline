@@ -52,7 +52,7 @@ usage:	${PRG}
 ibmcloud plugin repo-add "IBM Cloud Internal" https://plugins.test.cloud.ibm.com
 ibmcloud plugin install oss-tooling -r "IBM Cloud Internal"
 NEW_VERSION="4.2.3"
-CATALOG_API_KEY="t60qBADWvR2Nie72tJYV6vLBAquIPxw488g3Q2Ys8UFi"
+
 CATALOG_ID="a2737c18-75aa-407b-82b0-8b966e3aff22"
 OFFERING_ID="64764778-25b6-4280-854f-048df4095af2"
 ENV="prod"
@@ -61,7 +61,7 @@ CLOUD_API=""
 OFFERING_JSON="offering.json"
 
 #Calling functions from common_functions
-source withcr.sh
+source "$(dirname "$0")/withcr.sh"
 
 # ----------- Parse CLI Arguments -----------
 for arg in "$@"; do
