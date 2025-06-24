@@ -64,7 +64,7 @@ RELEASE_NOTES_LINK="release-notes-link"
 
 CLOUD_API="https://cloud.ibm.com"
 OFFERING_JSON="offering.json"
-source login.sh
+
 
 # ----------- Parse CLI Arguments -----------
 for arg in "$@"; do
