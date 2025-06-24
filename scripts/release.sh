@@ -32,8 +32,8 @@ usage:	${PRG}
 
 "
 
-# set -x  # Enable tracing for debugging
-# trap 'echo "[ERROR] Command failed at line $LINENO: $BASH_COMMAND"' ERR
+set -x  # Enable tracing for debugging
+trap 'echo "[ERROR] Command failed at line $LINENO: $BASH_COMMAND"' ERR
 
 ###############################################################################
 # Script: release.sh
