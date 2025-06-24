@@ -51,10 +51,10 @@ usage:	${PRG}
 # GLOBAL VARIABLES
 ibmcloud plugin repo-add "IBM Cloud Internal" https://plugins.test.cloud.ibm.com
 ibmcloud plugin install oss-tooling -r "IBM Cloud Internal"
-NEW_VERSION="4.2.1"
+NEW_VERSION="4.2.3"
 CATALOG_API_KEY="t60qBADWvR2Nie72tJYV6vLBAquIPxw488g3Q2Ys8UFi"
-CATALOG_ID="62a8fa8f-9894-417d-987b-8f7b9ff5b8e7"
-OFFERING_ID="3f991bfe-9752-49db-ac17-ce5522d42009"
+CATALOG_ID="a2737c18-75aa-407b-82b0-8b966e3aff22"
+OFFERING_ID="64764778-25b6-4280-854f-048df4095af2"
 ENV="prod"
 RELEASE_NOTES_LINK="release-notes-link"
 CLOUD_API=""
