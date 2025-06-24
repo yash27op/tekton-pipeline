@@ -51,6 +51,136 @@ usage:	${PRG}
 ###############################################################################
 # GLOBAL VARIABLES
 
+
+############################################################
+# Function to create change request
+#
+# $1: Cloud API endpoint
+# $2: IBM Cloud API key
+# $3: service name
+# $4: new version to release
+# $5: release notes link
+############################################################
+
+create_cr() {
+
+    ic_test_login "$CLOUD_API" "$CLOUD_API_KEY" 1>&2
+
+    service_name="$3"
+    new_version="$4"
+    release_notes_link="$5"
+    backout_plan="Not Applicable"
+    impact="Customers will see new version of tile:  ${new_version}"
+    customer_impact="low"
+    purpose="The purpose is to release a new version of the tile: ${new_version}"
+    description="Mark version ${new_version} as public in catalog. Release notes: ${release_notes_link}"
+    service_environment="Production"
+    service_environment_detail="Production"
+    deployment_method="manual"
+    region="us-south"
+    assigned_to="ocofaigh@ie.ibm.com"
+
+    if [ "$(uname)" == "Darwin" ]; then
+        start_date=$(date -v+1M -u +%Y-%m-%dT%H:%M:%SZ)
+    else
+        start_date=$(date --date='1 min' -u +%Y-%m-%dT%H:%M:%SZ)
+    fi
+
+    # cr_response=$(ibmcloud oss cr create -s "${service_name}" --backout_plan "${backout_plan}" --impact "${impact}" \
+    #     --purpose "${purpose}" --description "${description}" --service_environment "${service_environment}" \
+    #     --service_environment_detail "${service_environment_detail}" --customer_impact "${customer_impact}" \
+    #     --deployment_method "${deployment_method}" --region "${region}" --planned_start "${start_date}" \
+    #     --assigned_to "${assigned_to}" --output "json")
+
+    cr_api_status=$?
+
+    if [ "${cr_api_status}" != 0 ]; then
+        echo "Change request creation failed.">$2
+        return 1
+    else
+        cr_response=111345
+        cr_number="$(echo "${cr_response}" | jq -r '.[].number')">&2
+      
+        echo " Change request ${cr_number} has been created successfully.">&2
+        return ${cr_number} 
+    fi
+}
+
+
+
+############################################################
+# Function to mark change request as implemented
+#
+# $1: CR number $2: CLOUD_API_KEY
+############################################################
+mark_cr_implemented() {
+    # local cr_number="$1"
+    CLOUD_API="https://test.cloud.ibm.com"
+    ic_test_login "$CLOUD_API" "$CLOUD_API_KEY"
+    echo "Marking Change Request  as implemented..." >$2
+    # ibmcloud oss cr start -n ${cr_number}
+    if [ $? -ne 0 ]; then
+        echo " Failed to mark CR  as implemented." >$2
+        # return 1
+        exit
+    fi
+    echo "Change Request ${1} marked as implemented.">$2
+    wait
+}
+
+
+############################################################
+# Function to close the change request
+#
+# $1: CR number $2: CLOUD_API_KEY
+############################################################
+close_cr() {
+    # local cr_number="$1"
+    CLOUD_API="https://test.cloud.ibm.com"
+    ic_test_login "$CLOUD_API" "$CLOUD_API_KEY"
+    echo "Closing CR ${1}...">$2
+    # ibmcloud oss cr close -n ${cr_number} --notes "published successfully" 
+    if [ $? -ne 0 ]; then
+        echo " Failed to close CR ${1}.">$2
+        # return 1
+        exit
+    fi
+    echo " CR ${1} closed successfully.">$2
+    wait
+}
+
+ic_login() {
+    # Use direct unbuffered output to stderr (>&2)
+    # Timestamps help in pipeline logs
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Attempting login to production" >&2
+    
+    # Capture both stdout and stderr from ibmcloud command
+    response=$(ibmcloud login -a "$1" -r us-south -q --apikey "$2" 2>&1)
+    login_status=$?
+
+    if [ "${login_status}" != 0 ]; then
+        echo "[ERROR] Login failed" >&2
+        echo "${response}" >&2
+        return 1
+    fi
+    echo "[SUCCESS] Login completed" >&2
+}
+
+ic_test_login() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Attempting login to test environment" >&2
+    
+    response=$(ibmcloud login -a "$1" -r us-south -q --apikey "$2" 2>&1)
+    login_status=$?
+
+    if [ "${login_status}" != 0 ]; then
+        echo "[ERROR] Test login failed" >&2
+        echo "${response}" >&2
+        return 1
+    fi
+    echo "[SUCCESS] Test login completed" >&2
+}
+
+
 NEW_VERSION="4.2.3"
 
 CATALOG_ID="a2737c18-75aa-407b-82b0-8b966e3aff22"
@@ -376,131 +506,3 @@ if [ -z "${SERVICE_NAME}" ] || [ -z "${NEW_VERSION}" ] || [ -z "${RELEASE_NOTES_
   echo "${USAGE1}"
   exit 1
 fi
-
-############################################################
-# Function to create change request
-#
-# $1: Cloud API endpoint
-# $2: IBM Cloud API key
-# $3: service name
-# $4: new version to release
-# $5: release notes link
-############################################################
-
-create_cr() {
-
-    ic_test_login "$CLOUD_API" "$CLOUD_API_KEY" 1>&2
-
-    service_name="$3"
-    new_version="$4"
-    release_notes_link="$5"
-    backout_plan="Not Applicable"
-    impact="Customers will see new version of tile:  ${new_version}"
-    customer_impact="low"
-    purpose="The purpose is to release a new version of the tile: ${new_version}"
-    description="Mark version ${new_version} as public in catalog. Release notes: ${release_notes_link}"
-    service_environment="Production"
-    service_environment_detail="Production"
-    deployment_method="manual"
-    region="us-south"
-    assigned_to="ocofaigh@ie.ibm.com"
-
-    if [ "$(uname)" == "Darwin" ]; then
-        start_date=$(date -v+1M -u +%Y-%m-%dT%H:%M:%SZ)
-    else
-        start_date=$(date --date='1 min' -u +%Y-%m-%dT%H:%M:%SZ)
-    fi
-
-    # cr_response=$(ibmcloud oss cr create -s "${service_name}" --backout_plan "${backout_plan}" --impact "${impact}" \
-    #     --purpose "${purpose}" --description "${description}" --service_environment "${service_environment}" \
-    #     --service_environment_detail "${service_environment_detail}" --customer_impact "${customer_impact}" \
-    #     --deployment_method "${deployment_method}" --region "${region}" --planned_start "${start_date}" \
-    #     --assigned_to "${assigned_to}" --output "json")
-
-    cr_api_status=$?
-
-    if [ "${cr_api_status}" != 0 ]; then
-        echo "Change request creation failed.">$2
-        return 1
-    else
-        cr_response=111345
-        cr_number="$(echo "${cr_response}" | jq -r '.[].number')">&2
-      
-        echo " Change request ${cr_number} has been created successfully.">&2
-        return ${cr_number} 
-    fi
-}
-
-
-
-############################################################
-# Function to mark change request as implemented
-#
-# $1: CR number $2: CLOUD_API_KEY
-############################################################
-mark_cr_implemented() {
-    # local cr_number="$1"
-    CLOUD_API="https://test.cloud.ibm.com"
-    ic_test_login "$CLOUD_API" "$CLOUD_API_KEY"
-    echo "Marking Change Request  as implemented..." >$2
-    # ibmcloud oss cr start -n ${cr_number}
-    if [ $? -ne 0 ]; then
-        echo " Failed to mark CR  as implemented." >$2
-        # return 1
-        exit
-    fi
-    echo "Change Request ${1} marked as implemented.">$2
-    wait
-}
-
-
-############################################################
-# Function to close the change request
-#
-# $1: CR number $2: CLOUD_API_KEY
-############################################################
-close_cr() {
-    # local cr_number="$1"
-    CLOUD_API="https://test.cloud.ibm.com"
-    ic_test_login "$CLOUD_API" "$CLOUD_API_KEY"
-    echo "Closing CR ${1}...">$2
-    # ibmcloud oss cr close -n ${cr_number} --notes "published successfully" 
-    if [ $? -ne 0 ]; then
-        echo " Failed to close CR ${1}.">$2
-        # return 1
-        exit
-    fi
-    echo " CR ${1} closed successfully.">$2
-    wait
-}
-
-ic_login() {
-    # Use direct unbuffered output to stderr (>&2)
-    # Timestamps help in pipeline logs
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Attempting login to production" >&2
-    
-    # Capture both stdout and stderr from ibmcloud command
-    response=$(ibmcloud login -a "$1" -r us-south -q --apikey "$2" 2>&1)
-    login_status=$?
-
-    if [ "${login_status}" != 0 ]; then
-        echo "[ERROR] Login failed" >&2
-        echo "${response}" >&2
-        return 1
-    fi
-    echo "[SUCCESS] Login completed" >&2
-}
-
-ic_test_login() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Attempting login to test environment" >&2
-    
-    response=$(ibmcloud login -a "$1" -r us-south -q --apikey "$2" 2>&1)
-    login_status=$?
-
-    if [ "${login_status}" != 0 ]; then
-        echo "[ERROR] Test login failed" >&2
-        echo "${response}" >&2
-        return 1
-    fi
-    echo "[SUCCESS] Test login completed" >&2
-}
