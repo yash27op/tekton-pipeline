@@ -86,11 +86,11 @@ create_cr() {
         start_date=$(date --date='1 min' -u +%Y-%m-%dT%H:%M:%SZ)
     fi
 
-    # cr_response=$(ibmcloud oss cr create -s "${service_name}" --backout_plan "${backout_plan}" --impact "${impact}" \
-    #     --purpose "${purpose}" --description "${description}" --service_environment "${service_environment}" \
-    #     --service_environment_detail "${service_environment_detail}" --customer_impact "${customer_impact}" \
-    #     --deployment_method "${deployment_method}" --region "${region}" --planned_start "${start_date}" \
-    #     --assigned_to "${assigned_to}" --output "json")
+    cr_response=$(ibmcloud oss cr create -s "${service_name}" --backout_plan "${backout_plan}" --impact "${impact}" \
+        --purpose "${purpose}" --description "${description}" --service_environment "${service_environment}" \
+        --service_environment_detail "${service_environment_detail}" --customer_impact "${customer_impact}" \
+        --deployment_method "${deployment_method}" --region "${region}" --planned_start "${start_date}" \
+        --assigned_to "${assigned_to}" --output "json")
 
     cr_api_status=$?
 
@@ -98,7 +98,7 @@ create_cr() {
         echo "Change request creation failed.">$2
         return 1
     else
-        cr_response=111345
+        
         cr_number="$(echo "${cr_response}" | jq -r '.[].number')">&2
       
         echo " Change request ${cr_number} has been created successfully.">&2
@@ -118,7 +118,7 @@ mark_cr_implemented() {
     CLOUD_API="https://test.cloud.ibm.com"
     ic_test_login "$CLOUD_API" "$CLOUD_API_KEY"
     echo "Marking Change Request  as implemented..." >$2
-    # ibmcloud oss cr start -n ${cr_number}
+    ibmcloud oss cr start -n ${cr_number}
     if [ $? -ne 0 ]; then
         echo " Failed to mark CR  as implemented." >$2
         # return 1
@@ -139,7 +139,7 @@ close_cr() {
     CLOUD_API="https://test.cloud.ibm.com"
     ic_test_login "$CLOUD_API" "$CLOUD_API_KEY"
     echo "Closing CR ${1}...">$2
-    # ibmcloud oss cr close -n ${cr_number} --notes "published successfully" 
+    ibmcloud oss cr close -n ${cr_number} --notes "published successfully" 
     if [ $? -ne 0 ]; then
         echo " Failed to close CR ${1}.">$2
         # return 1
@@ -275,7 +275,6 @@ OFFERING_JSON="$WORKDIR/offering.json"
 echo "[INFO] Logging into IBM Cloud..."
 
 ic_login "$CLOUD_API" "$CATALOG_API_KEY"
-# ibmcloud login -a "https://cloud.ibm.com" -r us-south -q --apikey "$CATALOG_API_KEY"
 
  # ----------- Fetch Offering JSON -----------
 ibmcloud catalog offering get --catalog "$CATALOG_ID" --offering "$OFFERING_ID" --output json >"$OFFERING_JSON"
