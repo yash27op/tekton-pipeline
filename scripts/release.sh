@@ -50,8 +50,7 @@ usage:	${PRG}
 #   CATALOG_API_KEY - IBM CLoud CATALOG Access API KEY
 ###############################################################################
 # GLOBAL VARIABLES
-ibmcloud plugin repo-add "IBM Cloud Internal" https://plugins.test.cloud.ibm.com
-ibmcloud plugin install oss-tooling -r "IBM Cloud Internal"
+
 NEW_VERSION="4.2.3"
 
 CATALOG_ID="a2737c18-75aa-407b-82b0-8b966e3aff22"
