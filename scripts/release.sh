@@ -61,7 +61,7 @@ CLOUD_API=""
 OFFERING_JSON="offering.json"
 
 #Calling functions from common_functions
-source common_functions.sh
+source withcr.sh
 
 # ----------- Parse CLI Arguments -----------
 for arg in "$@"; do
