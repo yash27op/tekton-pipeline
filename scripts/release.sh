@@ -4,6 +4,7 @@ set -euo pipefail
 
 PRG=$(basename -- "${0}")
 
+
 USAGE="
 usage:	${PRG}
         [--help]
@@ -59,9 +60,12 @@ ENV="prod"
 RELEASE_NOTES_LINK="release-notes-link"
 CLOUD_API=""
 OFFERING_JSON="offering.json"
+SERVICE_NAME="Mock-Service"
+RELEASE_NOTES_LINK="release-notes-link"
 
-#Calling functions from common_functions
-source "$(dirname "$0")/withcr.sh"
+CLOUD_API="https://cloud.ibm.com"
+OFFERING_JSON="offering.json"
+source login.sh
 
 # ----------- Parse CLI Arguments -----------
 for arg in "$@"; do
@@ -141,8 +145,8 @@ OFFERING_JSON="$WORKDIR/offering.json"
 # # --- IBM Cloud Catalog Login ---
 echo "[INFO] Logging into IBM Cloud..."
 
-# ic_login "$CLOUD_API" "$CATALOG_API_KEY"
-ibmcloud login -a "https://cloud.ibm.com" -r us-south -q --apikey "$CATALOG_API_KEY"
+ic_login "$CLOUD_API" "$CATALOG_API_KEY"
+# ibmcloud login -a "https://cloud.ibm.com" -r us-south -q --apikey "$CATALOG_API_KEY"
 
  # ----------- Fetch Offering JSON -----------
 ibmcloud catalog offering get --catalog "$CATALOG_ID" --offering "$OFFERING_ID" --output json >"$OFFERING_JSON"
@@ -171,14 +175,20 @@ echo "[INFO] Fetching offering metadata JSON..."
 # ----------- Extracting the current state of the Offering Version under release ----------------------------
 version_state=$(jq -r --arg v "$NEW_VERSION" '.kinds[].versions[] | select(.version == $v) | .state.current' "$OFFERING_JSON")
 
+echo "state of the version is ${version_state}"
 
 # ----------- Resolve Version If Not Supplied or Draft -----------
 
-if [[ -z "${NEW_VERSION:-}" || "$version_state" == "new" ]]; then
-    echo "state of the version is ${version_state}"
+if [[ "$version_state" == "new" ]]; then
+    echo "state of version selected is not validated draft hence taking the latest validated draft version"
+    NEW_VERSION=$(jq -r '[.kinds[].versions[] | select(.state.current == "validated")] | sort_by(.version) | reverse | .[0].version' "$OFFERING_JSON")
+    echo "[INFO] Resolved latest validated version: $NEW_VERSION"
+elif [ -z "${NEW_VERSION:-}" ] || [ "$version_state" == "" ]; then
     echo "new-version not specified Hence taking the latest validated draft version"
     NEW_VERSION=$(jq -r '[.kinds[].versions[] | select(.state.current == "validated")] | sort_by(.version) | reverse | .[0].version' "$OFFERING_JSON")
     echo "[INFO] Resolved latest validated version: $NEW_VERSION"
+else
+    echo "Taking Offering version ${NEW_VERSION} Specified for Release"
 fi
 
 # ------- ENV based the External Service Requirement [prod/test] -------
@@ -194,63 +204,304 @@ else
 exit 1
 fi
 
-#  ----------  Calling Create_cr function to create Change request and Return CR Number -----------
+# # ------------- Calling functions from common_functions ---------------
+# source common_functions.sh
+
+#  ------------  Calling Create_cr function to create Change request and Return CR Number -----------
 CR_NUMBER=$(create_cr "${CLOUD_API}" "${CLOUD_API_KEY}" "${SERVICE_NAME}" "${NEW_VERSION}" "${RELEASE_NOTES_LINK}")
+wait
+#  ------------- Extract all 'flavor' variations as array elements  ------------------
+CLOUD_API="https://cloud.ibm.com"
+ic_login "$CLOUD_API" "$CATALOG_API_KEY"
+# Fetching variations from offering.json
+mapfile -t variation_array < <(jq -r '.badges[].constraints[] | select(.type == "flavor") | .rule[]' "$OFFERING_JSON")
 
-#  ----------- Extract all 'flavor' variations as array elements  ------------------
-# Create an empty array
-variation_array=()
+# ------------ Initialize an empty string to store variations --------------
+variations_str=""
 
-# Loop through the output of jq and add each item to the array
-while IFS= read -r line; do
-    variation_array+=("$line")
-done < <(jq -r '.badges[].constraints[] | select(.type == "flavor") | .rule[]' "$OFFERING_JSON")
-
-# Example to show the content of the array
-for item in "${variation_array[@]}"; do
-    echo "$item"
+# -------------- Iterate over the variation array and append to the string -----------
+for variation in "${variation_array[@]}"; do
+  variations_str+="$variation, "
 done
 
+# ------------- Remove the trailing comma and space -------------------------
+variations_str="${variations_str%, }"
 
-
-# #   --------  Iterate over the variation array  -------- 
-# for variation in "${variation_array[@]}"; do
-#   echo "Variations present of the Version $NEW_VERSION : $variation"
-# done
+# Print the variations
+echo "Variations present of the Version $NEW_VERSION: $variations_str"
 
 # ----------- Calling Mark CR  Implemented function to change he state of the Change Request -------------
-mark_cr_implemented "$CR_NUMBER"
-
+CLOUD_API="https://test.cloud.ibm.com"
+mark_cr_implemented "$CR_NUMBER" "$CLOUD_API_KEY"
+# wait
 # ----------- Fetching  Version Locator from Offering.json -----------
-VERSION_LOCATORS=$(jq -r --arg v "$NEW_VERSION" '.kinds[].versions[] | select(.version == $v) | .version_locator' "$OFFERING_JSON")
+CLOUD_API="https://cloud.ibm.com"
+ic_login "$CLOUD_API" "$CATALOG_API_KEY"
 
-# -----  Version Locator not found in the offering.json -------
-if [[ -z "$VERSION_LOCATORS" || "$VERSION_LOCATORS" == "null" ]]; then
+
+# ------------ Fetch version locators for the specified version ------------------
+mapfile -t VERSION_LOCATORS < <(jq -r --arg v "$NEW_VERSION" '.kinds[].versions[] | select(.version == $v) | .version_locator' "$OFFERING_JSON")
+
+# ----- Version Locator not found in the offering.json -------
+if [[ ${#VERSION_LOCATORS[@]} -eq 0 || "${VERSION_LOCATORS[0]}" == "null" ]]; then
     echo "[ERROR] version_locator not found for version $NEW_VERSION"
     exit 1
 fi
 
-# ---- Marking each Version locator of variations of version to Ready State ------
-for VERSION_LOCATOR in $VERSION_LOCATORS; do
+
+# Fetch current states from offering.json and store them in an array
+mapfile -t current_state_array < <(ibmcloud catalog offering get --catalog "$CATALOG_ID" --offering "$OFFERING_ID" --output json | jq -r --arg v "$NEW_VERSION" '.kinds[].versions[] | select(.version == $v) | .state.current')
+
+# 
+
+# Loop through the version locators and states
+for index in "${!VERSION_LOCATORS[@]}"; do
+    VERSION_LOCATOR="${VERSION_LOCATORS[$index]}"
+    current_state="${current_state_array[$index]}"
+
     echo "[INFO] Found version_locator: $VERSION_LOCATOR for the version $NEW_VERSION"
-    echo "[INFO] Marking version $NEW_VERSION Offerings as ready to publish (consumable)..."
-    ibmcloud catalog offering ready --version-locator $VERSION_LOCATOR
+
+    # Check if the current state is 'consumable'
+    if [[ "$current_state" == "consumable" ]]; then
+        echo "[INFO] Version $NEW_VERSION is already in 'consumable' state. Skipping update for version_locator: $VERSION_LOCATOR."
+    else
+        # Mark the version as consumable
+        echo "[INFO] Marking version $NEW_VERSION Offerings variation as ready to publish (consumable)..."
+        # ibmcloud catalog offering ready --version-locator "$VERSION_LOCATOR"
+    fi
 done
 
-# --------- Checking the New State of the Version ---------- 
-NEW_STATE=$(ibmcloud catalog offering get --catalog "$CATALOG_ID" --offering "$OFFERING_ID" --output json | jq -r --arg v "$NEW_VERSION" '.kinds[].versions[] | select(.version == $v) | .state.current')
-echo "[INFO] Updated version state: $NEW_STATE"
-if [[ "$NEW_STATE" == "consumable" ]]; then
-    echo "[SUCCESS] Version $NEW_VERSION is now ready to publish."
-else
-    echo "[ERROR] Failed to update version $NEW_VERSION to consumable. Current state: $NEW_STATE"
-    exit 1
-fi
-    
 echo "[INFO] Done."
 
 # ----------- Calling Close CR function to close the Change Request -------------
-close_cr "$CR_NUMBER"
+CLOUD_API="https://test.cloud.ibm.com"
+close_cr "$CR_NUMBER" "$CLOUD_API_KEY"
+# wait
 
 
 
+#!/usr/bin/env bash
+set -e
+
+# To run this script:
+# common_functions.sh
+
+# ========== Script Entry Point ==========
+
+PRG=$(basename -- "${0}")
+
+USAGE="
+usage:	${PRG}
+
+        Prerequisites:
+        IBM Cloud OSS CLI
+
+        
+        Required environment variables:
+        CLOUD_API_KEY (apikey to login to IBM Test Cloud)
+        
+        Required arguments:
+        --service-name=<service-name>
+        --new-version=<new-version>
+        --release-notes=<release-notes-link>
+        --env=<env>
+"
+############################################################
+# Function to create change request
+#
+# $1: Cloud API endpoint
+# $2: IBM Cloud API key
+# $3: service name
+# $4: new version to release
+# $5: release notes link
+############################################################
+
+
+
+# #!/usr/bin/env bash
+# set -e
+# set -x  # Enable tracing for debugging
+# trap 'echo "[ERROR] Command failed at line $LINENO: $BASH_COMMAND"' ERR
+
+# To run this script:
+# common_functions.sh
+
+ # ========== Script Entry Point ==========
+# source login.sh
+PRG=$(basename -- "${0}")
+
+USAGE1="
+usage:	${PRG}
+
+        Prerequisites:
+        IBM Cloud OSS CLI
+
+        
+        Required environment variables:
+        CLOUD_API_KEY (apikey to login to IBM Test Cloud)
+        
+        Required arguments:
+        --service-name=<service-name>
+        --new-version=<new-version>
+        --release-notes=<release-notes-link>
+        --env=<env>
+"
+############################################################
+# Parsing Required arguments for the common_functions.sh
+############################################################
+
+ENV="test"
+for arg in "$@"; do
+    if echo "${arg}" | grep -q -e --service-name=; then
+        SERVICE_NAME=$(echo "${arg}" | awk -F= '{ print $2 }')
+    fi
+    if echo "${arg}" | grep -q -e --release-notes=; then
+        RELEASE_NOTES_LINK=$(echo "${arg}" | awk -F= '{ print $2 }')
+    fi
+    if echo "${arg}" | grep -q -e --env; then
+        ENV=$(echo "${arg}" | awk -F= '{ print $2 }')
+        if [ "${ENV}" == "test" ]; then
+            CLOUD_API="https://test.cloud.ibm.com"
+        elif [ "${ENV}" == "prod" ]; then
+            CLOUD_API="https://cloud.ibm.com"
+        else
+            echo "Invalid input for env. Allowed values: [test, prod]"
+            exit 1
+        fi
+    fi
+done
+
+if [ -z "${SERVICE_NAME}" ] || [ -z "${NEW_VERSION}" ] || [ -z "${RELEASE_NOTES_LINK}" ] || [ -z "${CLOUD_API_KEY}" ]; then
+  echo
+  echo "One or more required arguments are missing. See usage below:"
+  echo "${USAGE1}"
+  exit 1
+fi
+
+############################################################
+# Function to create change request
+#
+# $1: Cloud API endpoint
+# $2: IBM Cloud API key
+# $3: service name
+# $4: new version to release
+# $5: release notes link
+############################################################
+
+create_cr() {
+
+    ic_test_login "$CLOUD_API" "$CLOUD_API_KEY" 1>&2
+
+    service_name="$3"
+    new_version="$4"
+    release_notes_link="$5"
+    backout_plan="Not Applicable"
+    impact="Customers will see new version of tile:  ${new_version}"
+    customer_impact="low"
+    purpose="The purpose is to release a new version of the tile: ${new_version}"
+    description="Mark version ${new_version} as public in catalog. Release notes: ${release_notes_link}"
+    service_environment="Production"
+    service_environment_detail="Production"
+    deployment_method="manual"
+    region="us-south"
+    assigned_to="ocofaigh@ie.ibm.com"
+
+    if [ "$(uname)" == "Darwin" ]; then
+        start_date=$(date -v+1M -u +%Y-%m-%dT%H:%M:%SZ)
+    else
+        start_date=$(date --date='1 min' -u +%Y-%m-%dT%H:%M:%SZ)
+    fi
+
+    # cr_response=$(ibmcloud oss cr create -s "${service_name}" --backout_plan "${backout_plan}" --impact "${impact}" \
+    #     --purpose "${purpose}" --description "${description}" --service_environment "${service_environment}" \
+    #     --service_environment_detail "${service_environment_detail}" --customer_impact "${customer_impact}" \
+    #     --deployment_method "${deployment_method}" --region "${region}" --planned_start "${start_date}" \
+    #     --assigned_to "${assigned_to}" --output "json")
+
+    cr_api_status=$?
+
+    if [ "${cr_api_status}" != 0 ]; then
+        echo "Change request creation failed.">$2
+        return 1
+    else
+        cr_response=111345
+        cr_number="$(echo "${cr_response}" | jq -r '.[].number')">&2
+      
+        echo " Change request ${cr_number} has been created successfully.">&2
+        return ${cr_number} 
+    fi
+}
+
+
+
+############################################################
+# Function to mark change request as implemented
+#
+# $1: CR number $2: CLOUD_API_KEY
+############################################################
+mark_cr_implemented() {
+    # local cr_number="$1"
+    CLOUD_API="https://test.cloud.ibm.com"
+    ic_test_login "$CLOUD_API" "$CLOUD_API_KEY"
+    echo "Marking Change Request  as implemented..." >$2
+    # ibmcloud oss cr start -n ${cr_number}
+    if [ $? -ne 0 ]; then
+        echo " Failed to mark CR  as implemented." >$2
+        # return 1
+        exit
+    fi
+    echo "Change Request ${1} marked as implemented.">$2
+    wait
+}
+
+
+############################################################
+# Function to close the change request
+#
+# $1: CR number $2: CLOUD_API_KEY
+############################################################
+close_cr() {
+    # local cr_number="$1"
+    CLOUD_API="https://test.cloud.ibm.com"
+    ic_test_login "$CLOUD_API" "$CLOUD_API_KEY"
+    echo "Closing CR ${1}...">$2
+    # ibmcloud oss cr close -n ${cr_number} --notes "published successfully" 
+    if [ $? -ne 0 ]; then
+        echo " Failed to close CR ${1}.">$2
+        # return 1
+        exit
+    fi
+    echo " CR ${1} closed successfully.">$2
+    wait
+}
+
+ic_login() {
+    # Use direct unbuffered output to stderr (>&2)
+    # Timestamps help in pipeline logs
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Attempting login to production" >&2
+    
+    # Capture both stdout and stderr from ibmcloud command
+    response=$(ibmcloud login -a "$1" -r us-south -q --apikey "$2" 2>&1)
+    login_status=$?
+
+    if [ "${login_status}" != 0 ]; then
+        echo "[ERROR] Login failed" >&2
+        echo "${response}" >&2
+        return 1
+    fi
+    echo "[SUCCESS] Login completed" >&2
+}
+
+ic_test_login() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Attempting login to test environment" >&2
+    
+    response=$(ibmcloud login -a "$1" -r us-south -q --apikey "$2" 2>&1)
+    login_status=$?
+
+    if [ "${login_status}" != 0 ]; then
+        echo "[ERROR] Test login failed" >&2
+        echo "${response}" >&2
+        return 1
+    fi
+    echo "[SUCCESS] Test login completed" >&2
+}
